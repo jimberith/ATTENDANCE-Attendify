@@ -35,7 +35,19 @@ const EnrollmentOnboarding: React.FC<EnrollmentOnboardingProps> = ({ user, onCom
   };
 
   const handleSkip = () => {
-    onComplete({ ...user, biometricsSkipped: true, classId: selectedClassId });
+    onComplete({ 
+      ...user, 
+      biometricsSkipped: true, 
+      classId: selectedClassId,
+      settings: user.settings || {
+        notificationsEnabled: false,
+        workdayStart: '09:00',
+        workdayEnd: '17:00',
+        twoFactorEnabled: false,
+        faceRecognitionSensitivity: 75,
+        require2FABeforeFaceScan: false
+      }
+    });
   };
 
   const handleCapture = () => {
@@ -52,7 +64,20 @@ const EnrollmentOnboarding: React.FC<EnrollmentOnboardingProps> = ({ user, onCom
             const stream = videoRef.current!.srcObject as MediaStream;
             stream.getTracks().forEach(t => t.stop());
             
-            onComplete({ ...user, facialTemplate: dataUrl, biometricsSkipped: false, classId: selectedClassId });
+            onComplete({ 
+              ...user, 
+              facialTemplates: [dataUrl], 
+              biometricsSkipped: false, 
+              classId: selectedClassId,
+              settings: user.settings || {
+                notificationsEnabled: false,
+                workdayStart: '09:00',
+                workdayEnd: '17:00',
+                twoFactorEnabled: false,
+                faceRecognitionSensitivity: 75,
+                require2FABeforeFaceScan: false
+              }
+            });
             return 100;
           }
           return p + 10;
@@ -92,8 +117,8 @@ const EnrollmentOnboarding: React.FC<EnrollmentOnboardingProps> = ({ user, onCom
         {step === 'CLASS_SELECT' && (
           <div className="space-y-8 animate-fadeIn">
             <div>
-              <h2 className="text-3xl font-black text-gray-800 tracking-tighter mb-2 italic uppercase">Select Your Class</h2>
-              <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Enrollment tracks your attendance within a group</p>
+              <h2 className="text-3xl font-black text-gray-800 tracking-tighter mb-2 italic uppercase">Select Your Group</h2>
+              <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Enrollment tracks your attendance within a specific class</p>
             </div>
             <div className="grid grid-cols-1 gap-3 max-h-60 overflow-y-auto pr-2">
                {classes.map(c => (
@@ -107,7 +132,7 @@ const EnrollmentOnboarding: React.FC<EnrollmentOnboardingProps> = ({ user, onCom
                ))}
                {classes.length === 0 && (
                  <div className="py-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
-                    <p className="text-slate-400 italic font-bold text-xs uppercase tracking-widest">No classes established yet.</p>
+                    <p className="text-slate-400 italic font-bold text-xs uppercase tracking-widest">No groups available.</p>
                  </div>
                )}
             </div>
@@ -117,13 +142,13 @@ const EnrollmentOnboarding: React.FC<EnrollmentOnboardingProps> = ({ user, onCom
                 onClick={startCamera}
                 className="w-full py-6 bg-indigo-600 text-white rounded-[30px] font-black text-xs uppercase tracking-[0.3em] shadow-xl hover:bg-indigo-700 disabled:opacity-50"
               >
-                {!selectedClassId && canProceedWithoutClass ? 'Skip Class & Face Setup' : 'Next: Face Setup'}
+                {!selectedClassId && canProceedWithoutClass ? 'Skip Group & Face Setup' : 'Next: Identity Registry'}
               </button>
               <button 
                 onClick={() => setStep('WELCOME')}
                 className="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-indigo-500 transition-colors"
               >
-                Back to Welcome
+                Back
               </button>
             </div>
           </div>
@@ -146,13 +171,13 @@ const EnrollmentOnboarding: React.FC<EnrollmentOnboardingProps> = ({ user, onCom
                 onClick={handleCapture}
                 className="w-full py-6 bg-green-500 text-white rounded-[30px] font-black text-xs uppercase tracking-[0.3em] shadow-xl hover:bg-green-600 active:scale-95 transition-all"
               >
-                Capture Face ID
+                Capture Template
               </button>
               <button 
                 onClick={handleSkip}
                 className="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-white transition-colors"
               >
-                Finish Setup without Biometrics
+                Skip Biometric Registry
               </button>
             </div>
           </div>
@@ -171,7 +196,7 @@ const EnrollmentOnboarding: React.FC<EnrollmentOnboardingProps> = ({ user, onCom
             </div>
             <div>
               <h3 className="text-2xl font-black text-gray-800 uppercase tracking-tighter mb-2 italic">Securing Profile</h3>
-              <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Syncing enrollment data with Cloud Registry...</p>
+              <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Encrypting identity data in cloud registry...</p>
             </div>
           </div>
         )}

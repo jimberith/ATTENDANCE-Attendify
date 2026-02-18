@@ -16,6 +16,8 @@ export interface UserSettings {
   workdayStart: string; // HH:mm
   workdayEnd: string;   // HH:mm
   twoFactorEnabled: boolean;
+  faceRecognitionSensitivity: number; // 0-100
+  require2FABeforeFaceScan: boolean;
 }
 
 export interface User {
@@ -28,7 +30,7 @@ export interface User {
   className?: string;
   role: UserRole;
   avatar?: string;
-  facialTemplate?: string;
+  facialTemplates?: string[]; // Array of base64 images
   biometricsSkipped?: boolean; 
   phone?: string;
   gender?: string;

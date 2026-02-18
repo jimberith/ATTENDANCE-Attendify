@@ -1,7 +1,7 @@
 
 import { User, AttendanceRecord, LeaveRequest, Class, AuditEntry, HardwareNode } from '../types';
 
-const API_BASE_URL = 'https://attendance-backend-7m9r.onrender.com';
+const API_BASE_URL = 'https://attendance-attendify.onrender.com';
 
 class DatabaseService {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {

@@ -22,7 +22,9 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser }) => {
     notificationsEnabled: false,
     workdayStart: '09:00',
     workdayEnd: '17:00',
-    twoFactorEnabled: false
+    twoFactorEnabled: false,
+    faceRecognitionSensitivity: 75,
+    require2FABeforeFaceScan: false
   });
 
   const [classes, setClasses] = useState<Class[]>([]);
@@ -33,6 +35,7 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser }) => {
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isCapturing, setIsCapturing] = useState(false);
 
   useEffect(() => {
@@ -71,22 +74,48 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser }) => {
     }
   };
 
+  const addTemplate = (dataUrl: string) => {
+    const currentTemplates = user.facialTemplates || [];
+    const updatedTemplates = [...currentTemplates, dataUrl];
+    onUpdateUser({ ...user, facialTemplates: updatedTemplates });
+    alert("Facial template registered successfully.");
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const dataUrl = ev.target?.result as string;
+        addTemplate(dataUrl);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const captureNewFace = () => {
     if (videoRef.current && canvasRef.current) {
       const context = canvasRef.current.getContext('2d');
       if (context) {
         context.drawImage(videoRef.current, 0, 0, 320, 240);
         const dataUrl = canvasRef.current.toDataURL('image/jpeg');
-        onUpdateUser({ ...user, facialTemplate: dataUrl });
+        addTemplate(dataUrl);
         
         const stream = videoRef.current.srcObject as MediaStream;
         stream.getTracks().forEach(t => t.stop());
         setShowFaceModal(false);
         setIsCapturing(false);
-        alert("Face data updated.");
       }
     }
   };
+
+  const resetTemplates = () => {
+    if (confirm("Are you sure you want to clear all facial data? You will need to re-register to use biometric attendance.")) {
+      onUpdateUser({ ...user, facialTemplates: [] });
+    }
+  };
+
+  const templateCount = user.facialTemplates?.length || 0;
 
   return (
     <div className="space-y-6 animate-fadeIn pb-16">
@@ -117,23 +146,45 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser }) => {
           <div className="glass-card rounded-[50px] p-10 text-center shadow-2xl border border-white/40 bg-white/95">
             <div className="relative inline-block mb-8">
               <div className="w-48 h-48 rounded-[40px] border-4 border-indigo-500/10 bg-indigo-50 flex items-center justify-center text-indigo-700 text-6xl font-black overflow-hidden shadow-inner ring-8 ring-white transform -rotate-3 group hover:rotate-0 transition-transform">
-                {user.facialTemplate ? (
-                  <img src={user.facialTemplate} className="w-full h-full object-cover" alt="Profile" />
+                {templateCount > 0 ? (
+                  <img src={user.facialTemplates![templateCount - 1]} className="w-full h-full object-cover" alt="Profile" />
                 ) : (
                   <span className="animate-pulse">{user.name.charAt(0)}</span>
                 )}
               </div>
-              <button 
-                onClick={() => setShowFaceModal(true)} 
-                className="absolute -bottom-2 -right-2 w-14 h-14 bg-indigo-600 text-white rounded-[22px] border-4 border-white flex items-center justify-center shadow-2xl hover:bg-indigo-700 transition-all active:scale-90"
-              >
-                <i className="fa-solid fa-camera text-lg"></i>
-              </button>
+              <div className="absolute -bottom-2 -right-2 flex flex-col space-y-2">
+                <button 
+                  onClick={() => setShowFaceModal(true)} 
+                  className="w-12 h-12 bg-indigo-600 text-white rounded-[20px] border-4 border-white flex items-center justify-center shadow-2xl hover:bg-indigo-700 transition-all active:scale-90"
+                  title="Camera Capture"
+                >
+                  <i className="fa-solid fa-camera text-sm"></i>
+                </button>
+                <button 
+                  onClick={() => fileInputRef.current?.click()} 
+                  className="w-12 h-12 bg-amber-500 text-white rounded-[20px] border-4 border-white flex items-center justify-center shadow-2xl hover:bg-amber-600 transition-all active:scale-90"
+                  title="Upload Image"
+                >
+                  <i className="fa-solid fa-upload text-sm"></i>
+                </button>
+              </div>
+              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
             </div>
             
             <h3 className="text-3xl font-black text-slate-800 tracking-tight leading-none mb-1 italic">{user.name}</h3>
-            <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.4em] mb-8">{user.role}</p>
+            <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.4em] mb-4">{user.role}</p>
             
+            <div className="flex justify-center space-x-2 mb-6">
+              <span className="px-3 py-1 bg-indigo-50 text-indigo-600 text-[9px] font-black uppercase rounded-full border border-indigo-100">
+                {templateCount} Templates
+              </span>
+              {templateCount > 0 && (
+                <button onClick={resetTemplates} className="px-3 py-1 bg-red-50 text-red-500 text-[9px] font-black uppercase rounded-full border border-red-100 hover:bg-red-500 hover:text-white transition-all">
+                  Reset
+                </button>
+              )}
+            </div>
+
             <div className="pt-8 border-t border-slate-100 flex flex-col space-y-4">
               <div className="bg-slate-50 py-4 px-6 rounded-[25px] border border-slate-100 flex justify-between items-center group hover:bg-white transition-all">
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Roll ID</p>
@@ -154,7 +205,37 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser }) => {
                Settings
             </h4>
             <div className="space-y-6">
-               <div className="flex items-center justify-between">
+               <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <p className="text-xs font-black uppercase tracking-widest">Face Sensitivity</p>
+                    <span className="text-indigo-400 font-bold text-[10px]">{settings.faceRecognitionSensitivity}%</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="1" max="100" 
+                    disabled={!isEditing}
+                    value={settings.faceRecognitionSensitivity} 
+                    onChange={e => setSettings({...settings, faceRecognitionSensitivity: parseInt(e.target.value)})}
+                    className="w-full accent-indigo-500 h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer disabled:opacity-30"
+                  />
+                  <p className="text-[9px] opacity-40 font-medium">Lower is more strict, higher is more lenient.</p>
+               </div>
+
+               <div className="flex items-center justify-between border-t border-white/10 pt-6">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-widest">Mandatory 2FA</p>
+                    <p className="text-[10px] opacity-40 font-medium italic">Before face scan</p>
+                  </div>
+                  <button 
+                    disabled={!isEditing}
+                    onClick={() => setSettings({...settings, require2FABeforeFaceScan: !settings.require2FABeforeFaceScan})}
+                    className={`w-12 h-6 rounded-full transition-all relative ${settings.require2FABeforeFaceScan ? 'bg-indigo-500' : 'bg-white/10'} ${!isEditing ? 'opacity-30' : ''}`}
+                  >
+                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.require2FABeforeFaceScan ? 'left-7' : 'left-1'}`}></div>
+                  </button>
+               </div>
+
+               <div className="flex items-center justify-between border-t border-white/10 pt-6">
                   <div>
                     <p className="text-xs font-black uppercase tracking-widest">Notifications</p>
                     <p className="text-[10px] opacity-40 font-medium">Daily reminders</p>
@@ -308,7 +389,7 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser }) => {
         <div className="fixed inset-0 z-[400] flex items-center justify-center p-6 bg-slate-900/80 backdrop-blur-md animate-fadeIn">
           <div className="glass-card w-full max-w-md rounded-[50px] overflow-hidden p-12 animate-slideUp border border-white/20 text-center bg-white/95">
              <div className="flex justify-between items-center mb-8">
-                <h3 className="text-2xl font-black text-slate-800 tracking-tight italic uppercase">Update Face</h3>
+                <h3 className="text-2xl font-black text-slate-800 tracking-tight italic uppercase">Capture Template</h3>
                 <button onClick={() => { setShowFaceModal(false); setIsCapturing(false); }} className="w-12 h-12 flex items-center justify-center rounded-[20px] hover:bg-slate-100 text-slate-400 transition-all"><i className="fa-solid fa-xmark text-lg"></i></button>
              </div>
              
@@ -333,7 +414,7 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser }) => {
                 disabled={!isCapturing}
                 className={`w-full py-6 rounded-[30px] font-black text-xs uppercase tracking-[0.3em] transition-all shadow-2xl ${isCapturing ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-slate-100 text-slate-300'}`}
               >
-                Capture
+                Capture Template
               </button>
           </div>
         </div>
