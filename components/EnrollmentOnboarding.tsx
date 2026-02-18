@@ -1,6 +1,7 @@
 
-import React, { useState, useRef } from 'react';
-import { User } from '../types';
+import React, { useState, useRef, useEffect } from 'react';
+import { User, Class, UserRole } from '../types';
+import { db } from '../services/db';
 
 interface EnrollmentOnboardingProps {
   user: User;
@@ -8,11 +9,18 @@ interface EnrollmentOnboardingProps {
 }
 
 const EnrollmentOnboarding: React.FC<EnrollmentOnboardingProps> = ({ user, onComplete }) => {
-  const [step, setStep] = useState<'WELCOME' | 'SCAN' | 'FINALIZING'>('WELCOME');
+  const [step, setStep] = useState<'WELCOME' | 'CLASS_SELECT' | 'SCAN' | 'FINALIZING'>('WELCOME');
   const [isCapturing, setIsCapturing] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
+  const [classes, setClasses] = useState<Class[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState('');
+  
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    db.getClasses().then(setClasses);
+  }, []);
 
   const startCamera = async () => {
     setStep('SCAN');
@@ -27,7 +35,7 @@ const EnrollmentOnboarding: React.FC<EnrollmentOnboardingProps> = ({ user, onCom
   };
 
   const handleSkip = () => {
-    onComplete({ ...user, biometricsSkipped: true });
+    onComplete({ ...user, biometricsSkipped: true, classId: selectedClassId });
   };
 
   const handleCapture = () => {
@@ -41,11 +49,10 @@ const EnrollmentOnboarding: React.FC<EnrollmentOnboardingProps> = ({ user, onCom
             context!.drawImage(videoRef.current!, 0, 0, 320, 240);
             const dataUrl = canvasRef.current!.toDataURL('image/jpeg');
             
-            // Stop camera
             const stream = videoRef.current!.srcObject as MediaStream;
             stream.getTracks().forEach(t => t.stop());
             
-            onComplete({ ...user, facialTemplate: dataUrl, biometricsSkipped: false });
+            onComplete({ ...user, facialTemplate: dataUrl, biometricsSkipped: false, classId: selectedClassId });
             return 100;
           }
           return p + 10;
@@ -53,6 +60,8 @@ const EnrollmentOnboarding: React.FC<EnrollmentOnboardingProps> = ({ user, onCom
       }, 200);
     }
   };
+
+  const canProceedWithoutClass = user.role === UserRole.ADMIN || user.role === UserRole.STAFF;
 
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-indigo-900 via-gray-900 to-black flex items-center justify-center p-6 z-[200]">
@@ -65,22 +74,56 @@ const EnrollmentOnboarding: React.FC<EnrollmentOnboardingProps> = ({ user, onCom
             </div>
             <div>
               <h2 className="text-4xl font-black text-gray-800 tracking-tighter mb-2 italic">Welcome, {user.name.split(' ')[0]}</h2>
-              <p className="text-gray-500 font-medium leading-relaxed px-4">
-                To access your secure dashboard, we recommend registering your unique facial signature. 
+              <p className="text-gray-500 font-medium leading-relaxed px-4 text-sm">
+                To access your secure dashboard, let's complete your profile setup and register your unique facial signature.
               </p>
             </div>
             <div className="space-y-3">
               <button 
-                onClick={startCamera}
+                onClick={() => setStep('CLASS_SELECT')}
                 className="w-full py-6 bg-indigo-600 text-white rounded-[30px] font-black text-xs uppercase tracking-[0.3em] shadow-2xl hover:bg-indigo-700 transition-all active:scale-95"
               >
-                Start Biometric Setup
+                Begin Setup
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 'CLASS_SELECT' && (
+          <div className="space-y-8 animate-fadeIn">
+            <div>
+              <h2 className="text-3xl font-black text-gray-800 tracking-tighter mb-2 italic uppercase">Select Your Class</h2>
+              <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Enrollment tracks your attendance within a group</p>
+            </div>
+            <div className="grid grid-cols-1 gap-3 max-h-60 overflow-y-auto pr-2">
+               {classes.map(c => (
+                 <button 
+                   key={c.id} 
+                   onClick={() => setSelectedClassId(c.id)}
+                   className={`p-4 rounded-2xl border-2 transition-all font-bold text-left ${selectedClassId === c.id ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-100 text-slate-600'}`}
+                 >
+                   {c.name}
+                 </button>
+               ))}
+               {classes.length === 0 && (
+                 <div className="py-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                    <p className="text-slate-400 italic font-bold text-xs uppercase tracking-widest">No classes established yet.</p>
+                 </div>
+               )}
+            </div>
+            <div className="flex flex-col space-y-3">
+              <button 
+                disabled={!selectedClassId && !canProceedWithoutClass}
+                onClick={startCamera}
+                className="w-full py-6 bg-indigo-600 text-white rounded-[30px] font-black text-xs uppercase tracking-[0.3em] shadow-xl hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {!selectedClassId && canProceedWithoutClass ? 'Skip Class & Face Setup' : 'Next: Face Setup'}
               </button>
               <button 
-                onClick={handleSkip}
-                className="w-full py-4 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] hover:text-white transition-colors"
+                onClick={() => setStep('WELCOME')}
+                className="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-indigo-500 transition-colors"
               >
-                Skip for Now
+                Back to Welcome
               </button>
             </div>
           </div>
@@ -106,10 +149,10 @@ const EnrollmentOnboarding: React.FC<EnrollmentOnboardingProps> = ({ user, onCom
                 Capture Face ID
               </button>
               <button 
-                onClick={() => setStep('WELCOME')}
+                onClick={handleSkip}
                 className="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-white transition-colors"
               >
-                Back
+                Finish Setup without Biometrics
               </button>
             </div>
           </div>
@@ -128,7 +171,7 @@ const EnrollmentOnboarding: React.FC<EnrollmentOnboardingProps> = ({ user, onCom
             </div>
             <div>
               <h3 className="text-2xl font-black text-gray-800 uppercase tracking-tighter mb-2 italic">Securing Profile</h3>
-              <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Encrypting biometric hash to local storage engine...</p>
+              <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Syncing enrollment data with Cloud Registry...</p>
             </div>
           </div>
         )}

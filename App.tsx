@@ -10,6 +10,7 @@ import LeaveRequests from './pages/LeaveRequests';
 import Profile from './pages/Profile';
 import AdminControls from './pages/AdminControls';
 import EnrollmentOnboarding from './components/EnrollmentOnboarding';
+import { AIChatbot } from './components/AIChatbot';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -50,11 +51,6 @@ const App: React.FC = () => {
     return <Login onLogin={handleLogin} />;
   }
 
-  // Gate content if user has NO facial template AND hasn't skipped onboarding yet
-  if (!currentUser.facialTemplate && !currentUser.biometricsSkipped) {
-    return <EnrollmentOnboarding user={currentUser} onComplete={handleUserUpdate} />;
-  }
-
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard': return <Dashboard user={currentUser} />;
@@ -79,6 +75,8 @@ const App: React.FC = () => {
       <main className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="max-w-7xl mx-auto h-full">{renderContent()}</div>
       </main>
+
+      <AIChatbot />
     </div>
   );
 };

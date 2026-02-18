@@ -5,16 +5,30 @@ export enum UserRole {
   ADMIN = 'ADMIN'
 }
 
+export interface Class {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+export interface UserSettings {
+  notificationsEnabled: boolean;
+  workdayStart: string; // HH:mm
+  workdayEnd: string;   // HH:mm
+  twoFactorEnabled: boolean;
+}
+
 export interface User {
   id: string;
   name: string;
   email: string;
-  password?: string; // Stored in DB
+  password?: string;
   rollNumber: string;
-  className?: string; // New: Assigned class/section
+  classId?: string;
+  className?: string;
   role: UserRole;
   avatar?: string;
-  facialTemplate?: string; // Base64 encoded facial signature
+  facialTemplate?: string;
   biometricsSkipped?: boolean; 
   phone?: string;
   gender?: string;
@@ -22,6 +36,16 @@ export interface User {
   address?: string;
   isVerified: boolean;
   lastLogin?: string;
+  settings?: UserSettings;
+}
+
+export interface HardwareNode {
+  id: string;
+  name: string;
+  type: 'ESP32_CAM' | 'DOOR_LOCK' | 'BIOMETRIC_READER';
+  ipAddress: string;
+  status: 'ONLINE' | 'OFFLINE';
+  lastSeen?: string;
 }
 
 export interface AttendanceRecord {
@@ -29,7 +53,7 @@ export interface AttendanceRecord {
   userId: string;
   date: string;
   time: string;
-  status: 'PRESENT' | 'ABSENT' | 'LATE';
+  status: 'PRESENT' | 'ABSENT' | 'OD';
   location: {
     lat: number;
     lng: number;
@@ -47,4 +71,13 @@ export interface LeaveRequest {
   endDate: string;
   reason: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
+}
+
+export interface AuditEntry {
+  id: string;
+  timestamp: string;
+  adminId: string;
+  adminName: string;
+  action: string;
+  details: string;
 }

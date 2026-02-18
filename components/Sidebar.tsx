@@ -11,14 +11,14 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ user, activeTab, setActiveTab, onLogout }) => {
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: 'fa-table-columns' },
+    { id: 'dashboard', label: 'Home', icon: 'fa-table-columns' },
     { id: 'attendance', label: 'Attendance', icon: 'fa-id-card' },
-    { id: 'leave', label: 'Leave/OD', icon: 'fa-calendar-day' },
-    { id: 'profile', label: 'Profile', icon: 'fa-user' },
+    { id: 'leave', label: 'Requests', icon: 'fa-calendar-day' },
+    { id: 'profile', label: 'Me', icon: 'fa-user' },
   ];
 
   if (user.role === UserRole.ADMIN) {
-    navItems.push({ id: 'admin', label: 'Admin Panel', icon: 'fa-gear' });
+    navItems.push({ id: 'admin', label: 'Admin', icon: 'fa-gear' });
   }
 
   return (

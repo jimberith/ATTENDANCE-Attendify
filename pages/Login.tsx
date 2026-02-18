@@ -8,262 +8,128 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  const [isSignup, setIsSignup] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [showGooglePicker, setShowGooglePicker] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  
-  const [emailOrRoll, setEmailOrRoll] = useState('');
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [rollNumber, setRollNumber] = useState('');
-  const [className, setClassName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const simulatedGoogleAccounts = [
-    { name: 'John Doe', email: 'john.doe@gmail.com', avatar: 'https://i.pravatar.cc/150?u=john' },
-    { name: 'Alice Smith', email: 'alice.work@gmail.com', avatar: 'https://i.pravatar.cc/150?u=alice' },
-    { name: 'System Root', email: 'admin.attendify@gmail.com', avatar: 'https://i.pravatar.cc/150?u=root' }
-  ];
-
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     setIsLoading(true);
-    
-    try {
-      const users = await db.getUsers();
-      const user = users.find(u => (u.email === emailOrRoll || u.rollNumber === emailOrRoll) && u.password === password);
-      
-      setTimeout(() => {
-        if (user) {
-          onLogin(user);
-        } else {
-          setError('Authentication failed. Check your ID and password.');
-          setIsLoading(false);
-        }
-      }, 1000);
-    } catch (err) {
-      setError('System unreachable. Please try again later.');
-      setIsLoading(false);
-    }
-  };
-
-  const finalizeRegistration = async (regName: string, regEmail: string, regPass: string, regRoll?: string, regClass?: string) => {
-    const usersList = await db.getUsers();
-    // Only the very first user registered in the system becomes Admin
-    const assignedRole = usersList.length === 0 ? UserRole.ADMIN : UserRole.STUDENT;
-
-    const newUser: User = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: regName,
-      email: regEmail,
-      password: regPass,
-      rollNumber: regRoll || (assignedRole === UserRole.ADMIN ? 'ADM-001' : 'STU-' + Math.floor(Math.random() * 90000 + 10000)),
-      className: regClass || (assignedRole === UserRole.ADMIN ? 'Management' : 'General'),
-      role: assignedRole,
-      isVerified: true,
-      lastLogin: new Date().toISOString()
-    };
-    return await db.saveUser(newUser);
-  };
-
-  const selectGoogleAccount = async (account: typeof simulatedGoogleAccounts[0]) => {
-    setShowGooglePicker(false);
-    setIsGoogleLoading(true);
     setError(null);
-    
-    setTimeout(async () => {
-      try {
-        const users = await db.getUsers();
-        const existingUser = users.find(u => u.email === account.email);
-
-        if (existingUser) {
-          onLogin(existingUser);
-        } else {
-          const newUser = await finalizeRegistration(account.name, account.email, 'google-oauth');
-          onLogin(newUser);
-        }
-      } catch (err) {
-        setError('Google Sign-In failed.');
-        setIsGoogleLoading(false);
-      }
-    }, 1500);
-  };
-
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setIsLoading(true);
 
     try {
-      const users = await db.getUsers();
-      if (users.some(u => u.email === emailOrRoll)) {
-        setError('Identity already registered. Use login instead.');
-        setIsLoading(false);
-        return;
-      }
+      if (isLogin) {
+        const user = await db.findByEmail(email);
+        if (!user || user.password !== password) {
+          throw new Error("Invalid email or password.");
+        }
+        onLogin(user);
+      } else {
+        const existing = await db.findByEmail(email);
+        if (existing) throw new Error("Email already registered.");
 
-      const newUser = await finalizeRegistration(name, emailOrRoll, password, rollNumber, className);
-      setTimeout(() => {
-        onLogin(newUser);
-      }, 1000);
-    } catch (err) {
-      setError('Registration error.');
+        const allUsers = await db.getUsers();
+        // The very first user to sign up in the system is automatically the Admin
+        const assignedRole = allUsers.length === 0 ? UserRole.ADMIN : UserRole.STUDENT;
+
+        const newUser: User = {
+          id: Math.random().toString(36).substr(2, 9),
+          name,
+          email,
+          password,
+          rollNumber: assignedRole === UserRole.ADMIN ? 'ROOT-001' : 'ID-' + Math.floor(Math.random() * 90000 + 10000),
+          role: assignedRole,
+          isVerified: true, // Verification removed as requested
+          lastLogin: new Date().toISOString()
+        };
+        const saved = await db.saveUser(newUser);
+        onLogin(saved);
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 space-y-8 relative overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
-
-      <div className="text-center text-white max-w-lg animate-fadeIn z-10">
-        <h1 className="text-8xl font-black tracking-tighter mb-2 italic drop-shadow-2xl select-none">ATTENDIFY</h1>
-        <p className="text-xl font-bold mb-4 tracking-[0.4em] opacity-80 uppercase">Verified Entry Protocol</p>
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-[#0f172a]">
+      <div className="text-center mb-10">
+        <h1 className="text-5xl font-black text-white tracking-tighter italic">ATTENDIFY</h1>
+        <p className="text-indigo-400 font-bold uppercase text-[10px] tracking-widest mt-2">Smart Attendance System</p>
       </div>
 
-      <div className="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-[60px] shadow-[0_40px_120px_rgba(0,0,0,0.5)] overflow-hidden p-10 md:p-12 relative animate-slideUp border border-white/40 z-10">
-        <div className="flex bg-gray-100/80 p-1.5 rounded-[30px] mb-10 shadow-inner">
-          <button 
-            onClick={() => { setIsSignup(false); setError(null); }} 
-            className={`flex-1 py-4 px-6 rounded-[25px] text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${!isSignup ? 'bg-white text-indigo-700 shadow-md scale-[1.05]' : 'text-gray-400 hover:text-gray-600'}`}
-          >
-            Sign In
-          </button>
-          <button 
-            onClick={() => { setIsSignup(true); setError(null); }} 
-            className={`flex-1 py-4 px-6 rounded-[25px] text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${isSignup ? 'bg-white text-indigo-700 shadow-md scale-[1.05]' : 'text-gray-400 hover:text-gray-600'}`}
-          >
-            Create
-          </button>
-        </div>
+      <div className="w-full max-w-md bg-white rounded-[40px] p-10 shadow-2xl animate-fadeIn">
+        <h2 className="text-3xl font-black text-slate-900 mb-8 text-center uppercase tracking-tight">
+          {isLogin ? 'Login' : 'Sign Up'}
+        </h2>
 
-        {error && (
-          <div className="mb-8 p-4 bg-red-50 border-l-4 border-red-500 rounded-2xl animate-shake flex items-center space-x-3">
-            <i className="fa-solid fa-circle-exclamation text-red-500"></i>
-            <p className="text-xs font-bold text-red-700">{error}</p>
-          </div>
-        )}
-
-        <form onSubmit={isSignup ? handleSignup : handleLogin} className="space-y-4">
-          <div className="relative group">
-            <i className="fa-solid fa-at absolute left-6 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-indigo-500 transition-colors"></i>
+        <form onSubmit={handleAuth} className="space-y-4">
+          {!isLogin && (
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-2">Full Name</label>
+              <input 
+                type="text" 
+                placeholder="Your name" 
+                className="w-full px-6 py-4 bg-slate-100 rounded-2xl border-2 border-transparent outline-none font-bold text-slate-900 focus:border-indigo-500 transition-all"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                required
+              />
+            </div>
+          )}
+          <div>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-2">Email Address</label>
             <input 
-              type="text" required value={emailOrRoll} onChange={e => setEmailOrRoll(e.target.value)} 
-              placeholder={isSignup ? "Corporate Email" : "Email or Roll Number"} 
-              className="w-full pl-14 pr-7 py-5 bg-gray-50 border-2 border-transparent rounded-[30px] outline-none focus:border-indigo-100 focus:bg-white focus:ring-8 focus:ring-indigo-500/5 transition-all font-bold text-gray-700 placeholder:text-gray-300" 
+              type="email" 
+              placeholder="email@example.com" 
+              className="w-full px-6 py-4 bg-slate-100 rounded-2xl border-2 border-transparent outline-none font-bold text-slate-900 focus:border-indigo-500 transition-all"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-2">Password</label>
+            <input 
+              type="password" 
+              placeholder="••••••••" 
+              className="w-full px-6 py-4 bg-slate-100 rounded-2xl border-2 border-transparent outline-none font-bold text-slate-900 focus:border-indigo-500 transition-all"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
             />
           </div>
 
-          {isSignup && (
-            <div className="space-y-4 animate-fadeIn">
-              <div className="relative group">
-                <i className="fa-solid fa-user absolute left-6 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-indigo-500 transition-colors"></i>
-                <input 
-                  type="text" required value={name} onChange={e => setName(e.target.value)} 
-                  placeholder="Full Legal Name" 
-                  className="w-full pl-14 pr-7 py-5 bg-gray-50 border-2 border-transparent rounded-[30px] outline-none focus:border-indigo-100 focus:bg-white focus:ring-8 focus:ring-indigo-500/5 transition-all font-bold text-gray-700 placeholder:text-gray-300" 
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="relative group">
-                  <i className="fa-solid fa-id-card absolute left-6 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-indigo-500 transition-colors"></i>
-                  <input 
-                    type="text" required value={rollNumber} onChange={e => setRollNumber(e.target.value)} 
-                    placeholder="Reg ID" 
-                    className="w-full pl-14 pr-4 py-5 bg-gray-50 border-2 border-transparent rounded-[30px] outline-none focus:border-indigo-100 focus:bg-white transition-all font-bold text-gray-700 placeholder:text-gray-300 text-sm" 
-                  />
-                </div>
-                <div className="relative group">
-                  <i className="fa-solid fa-building-user absolute left-6 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-indigo-500 transition-colors"></i>
-                  <input 
-                    type="text" required value={className} onChange={e => setClassName(e.target.value)} 
-                    placeholder="Class/Dept" 
-                    className="w-full pl-14 pr-4 py-5 bg-gray-50 border-2 border-transparent rounded-[30px] outline-none focus:border-indigo-100 focus:bg-white transition-all font-bold text-gray-700 placeholder:text-gray-300 text-sm" 
-                  />
-                </div>
-              </div>
+          {error && (
+            <div className="bg-red-50 p-4 rounded-xl border border-red-100">
+              <p className="text-red-500 text-xs font-bold text-center">{error}</p>
             </div>
           )}
 
-          <div className="relative group">
-            <i className="fa-solid fa-shield-halved absolute left-6 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-indigo-500 transition-colors"></i>
-            <input 
-              type="password" required value={password} onChange={e => setPassword(e.target.value)} 
-              placeholder="Secure Password" 
-              className="w-full pl-14 pr-7 py-5 bg-gray-50 border-2 border-transparent rounded-[30px] outline-none focus:border-indigo-100 focus:bg-white focus:ring-8 focus:ring-indigo-500/5 transition-all font-bold text-gray-700 placeholder:text-gray-300" 
-            />
-          </div>
-
           <button 
-            type="submit" disabled={isLoading}
-            className="w-full py-6 bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-700 text-white rounded-[35px] font-black text-xs uppercase tracking-[0.4em] shadow-[0_20px_50px_rgba(79,70,229,0.3)] hover:shadow-[0_25px_60px_rgba(79,70,229,0.4)] active:scale-[0.97] transition-all disabled:opacity-70 flex items-center justify-center overflow-hidden relative group/btn"
+            type="submit" 
+            disabled={isLoading}
+            className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-black transition-all disabled:opacity-50 mt-4 shadow-xl active:scale-[0.98]"
           >
-            {isLoading ? (
-              <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-            ) : (
-              <span className="relative z-10 group-hover/btn:tracking-[0.5em] transition-all duration-300">{isSignup ? 'Initialize Account' : 'Authenticate Access'}</span>
-            )}
-            <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover/btn:translate-x-[0%] transition-transform duration-500"></div>
+            {isLoading ? "Loading..." : (isLogin ? "Sign In" : "Create Account")}
           </button>
         </form>
 
-        <div className="relative flex items-center py-6">
-          <div className="flex-grow border-t border-gray-100"></div>
-          <span className="flex-shrink mx-6 text-[9px] font-black text-gray-300 uppercase tracking-[0.3em]">Alternate Identity</span>
-          <div className="flex-grow border-t border-gray-100"></div>
-        </div>
-
         <button 
-          onClick={() => { setShowGooglePicker(true); setError(null); }} 
-          disabled={isGoogleLoading}
-          className="w-full flex items-center justify-center space-x-4 py-5 bg-white border border-gray-100 rounded-[35px] font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:shadow-xl active:scale-[0.97] transition-all group/google"
+          onClick={() => { setIsLogin(!isLogin); setError(null); }}
+          className="mt-8 w-full text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest hover:text-indigo-600 transition-colors"
         >
-          {isGoogleLoading ? (
-            <div className="w-5 h-5 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+          {isLogin ? (
+            <>Don't have an account? <span className="text-indigo-600 ml-1">Sign Up</span></>
           ) : (
-            <>
-              <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" className="w-6 h-6 group-hover/google:scale-125 transition-transform duration-300" alt="Google" />
-              <span className="text-sm tracking-tight font-black text-gray-600 uppercase">Google Single Sign-On</span>
-            </>
+            <>Already have an account? <span className="text-indigo-600 ml-1">Login</span></>
           )}
         </button>
       </div>
-
-      {showGooglePicker && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/80 backdrop-blur-2xl animate-fadeIn">
-          <div className="bg-white w-full max-w-sm rounded-[60px] overflow-hidden shadow-[0_50px_150px_rgba(0,0,0,0.6)] animate-slideUp border border-white/20">
-            <div className="p-12 text-center">
-              <div className="w-20 h-20 bg-indigo-50 rounded-3xl mx-auto flex items-center justify-center mb-8 shadow-inner">
-                 <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" className="w-10 h-10" alt="Google" />
-              </div>
-              <h3 className="text-3xl font-black text-gray-800 mb-8 tracking-tighter italic">Choose Your ID</h3>
-              <div className="space-y-3">
-                {simulatedGoogleAccounts.map((acc) => (
-                  <button 
-                    key={acc.email} onClick={() => selectGoogleAccount(acc)} 
-                    className="w-full flex items-center p-5 rounded-[30px] hover:bg-indigo-50 transition-all border border-gray-50 group hover:border-indigo-100 shadow-sm hover:shadow-md"
-                  >
-                    <img src={acc.avatar} className="w-12 h-12 rounded-full mr-4 border-2 border-white shadow-md group-hover:scale-110 transition-transform" alt={acc.name} />
-                    <div className="text-left overflow-hidden">
-                      <p className="text-sm font-black text-gray-800 truncate group-hover:text-indigo-700">{acc.name}</p>
-                      <p className="text-[10px] text-gray-400 font-bold truncate tracking-widest uppercase">{acc.email}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-              <button onClick={() => setShowGooglePicker(false)} className="mt-10 px-8 py-3 text-[10px] font-black text-gray-300 hover:text-red-500 uppercase tracking-widest transition-colors bg-gray-50 rounded-full hover:bg-red-50">Discard Selection</button>
-            </div>
-          </div>
-        </div>
-      )}
-      <style>{`
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
-        .animate-shake { animation: shake 0.4s ease-in-out; }
-      `}</style>
     </div>
   );
 };
