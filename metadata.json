@@ -1,0 +1,8 @@
+{
+  "name": "Smart Attendance System",
+  "description": "A high-end attendance monitoring application featuring face recognition and location-based verification for students and staff.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
