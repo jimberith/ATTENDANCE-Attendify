@@ -51,15 +51,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const lateStarts = records.filter(r => {
     if (!userClass?.startTime || r.status !== 'PRESENT') return false;
     // Simple HH:mm comparison
-    const recordTime = r.time.split(' ')[0]; // Assuming 10:30 AM format? Let's check db time format
-    // Attendance.tsx uses: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-    // Returns something like "10:30 AM"
-    const [hStr, mStr] = r.time.split(':');
-    const isPM = r.time.includes('PM');
+    const recordTime = r.time; // Format: "10:30 AM"
+    const [hStr, rest] = recordTime.split(':');
+    const isPM = recordTime.includes('PM');
     let hours = parseInt(hStr);
     if (isPM && hours !== 12) hours += 12;
     if (!isPM && hours === 12) hours = 0;
-    const minutes = parseInt(mStr.split(' ')[0]);
+    const minutes = parseInt(rest.split(' ')[0]);
     const totalMinutes = hours * 60 + minutes;
 
     const [startH, startM] = userClass.startTime.split(':').map(Number);
@@ -68,16 +66,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     return totalMinutes > startTotal;
   }).length;
 
-  // Early exits usually come from live tracking breaches or manual checkout
-  // For display, we'll check records that have a 'leftGeofenceAt' time before the end time
   const earlyExits = records.filter(r => {
     if (!userClass?.endTime || !r.leftGeofenceAt) return false;
-    const [hStr, mStr] = r.leftGeofenceAt.split(':');
-    const isPM = r.leftGeofenceAt.includes('PM');
+    const timeStr = r.leftGeofenceAt;
+    const [hStr, rest] = timeStr.split(':');
+    const isPM = timeStr.includes('PM');
     let hours = parseInt(hStr);
     if (isPM && hours !== 12) hours += 12;
     if (!isPM && hours === 12) hours = 0;
-    const minutes = parseInt(mStr.split(' ')[0]);
+    const minutes = parseInt(rest.split(' ')[0]);
     const totalMinutes = hours * 60 + minutes;
 
     const [endH, endM] = userClass.endTime.split(':').map(Number);
@@ -165,8 +162,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
       <div className="glass-card p-6 rounded-xl border border-white/10 bg-black/20">
         <h3 className="text-sm font-bold text-white uppercase italic mb-6">Daily Record</h3>
-        <div className="w-full h-[300px] overflow-hidden" style={{ minWidth: 0, position: 'relative' }}>
-          <ResponsiveContainer width="100%" height="100%" debounce={50}>
+        <div className="w-full h-[300px] relative" style={{ minWidth: '0px', minHeight: '300px' }}>
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={100}>
             <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
               <XAxis dataKey="name" hide />
@@ -188,7 +185,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         </div>
       </div>
 
-      {/* NEW TRACKING SECTION */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="glass-card p-6 rounded-xl border border-white/10 bg-black/30 flex items-center justify-between">
           <div className="flex items-center gap-4">

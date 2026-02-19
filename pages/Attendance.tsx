@@ -68,7 +68,11 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onUpdateUser }) => {
     setStatus('capturing');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      if (videoRef.current) videoRef.current.srcObject = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        // Ensure video plays
+        videoRef.current.play().catch(e => console.error("Video play error", e));
+      }
     } catch (err) {
       alert("PLEASE ALLOW CAMERA ACCESS IN YOUR BROWSER.");
       setIsCapturing(false);
@@ -77,7 +81,8 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onUpdateUser }) => {
   };
 
   const verifyAndMark = async () => {
-    if (videoRef.current && canvasRef.current) {
+    // Check if video is ready for drawing
+    if (videoRef.current && canvasRef.current && videoRef.current.readyState >= 2) {
       setStatus('matching');
       setScanProgress(0);
       
@@ -86,11 +91,18 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onUpdateUser }) => {
           setScanProgress(p => p >= 90 ? 90 : p + 10);
         }, 150);
 
-        const context = canvasRef.current.getContext('2d');
+        const context = canvasRef.current.getContext('2d', { willReadFrequently: true });
         if (!context) return;
-        context.drawImage(videoRef.current, 0, 0, 320, 240);
         
-        const liveCapture = canvasRef.current.toDataURL('image/jpeg');
+        // Final sanity check for dimensions
+        const vw = videoRef.current.videoWidth || 320;
+        const vh = videoRef.current.videoHeight || 240;
+        canvasRef.current.width = vw;
+        canvasRef.current.height = vh;
+        
+        context.drawImage(videoRef.current, 0, 0, vw, vh);
+        
+        const liveCapture = canvasRef.current.toDataURL('image/jpeg', 0.8);
         const base64Live = liveCapture.split(',')[1];
         const templates = user.facialTemplates || [];
 
@@ -138,6 +150,8 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onUpdateUser }) => {
         setStatus('idle');
         alert("COULD NOT PROCESS SCAN.");
       }
+    } else {
+      alert("CAMERA NOT READY. PLEASE WAIT A SECOND.");
     }
   };
 
@@ -188,7 +202,7 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onUpdateUser }) => {
 
           {status === 'capturing' && (
             <>
-              <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover grayscale opacity-80 scale-x-[-1]" />
+              <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover grayscale opacity-80 scale-x-[-1]" />
               <div className="absolute inset-0 border-[2px] border-indigo-500/30"></div>
               <div className="absolute inset-[15%] border-2 border-dashed border-indigo-500/40 rounded-full"></div>
               <div className="absolute top-0 left-0 w-full h-1 bg-indigo-400 shadow-[0_0_20px_#4f46e5] animate-scan"></div>

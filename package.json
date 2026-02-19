@@ -1,16 +1,23 @@
-
 {
-  "name": "attendify-static",
+  "name": "attendify",
   "version": "1.0.0",
+  "type": "module",
   "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
   "dependencies": {
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "recharts": "^2.7.2",
     "@google/genai": "^1.41.0"
   },
-  "scripts": {
-    "start": "serve .",
-    "build": "echo 'Static build complete'"
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^6.0.0"
   }
 }

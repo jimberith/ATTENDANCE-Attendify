@@ -27,7 +27,10 @@ const EnrollmentOnboarding: React.FC<EnrollmentOnboardingProps> = ({ user, onCom
     setIsCapturing(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      if (videoRef.current) videoRef.current.srcObject = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play().catch(e => console.error("Video play error", e));
+      }
     } catch (err) {
       alert("Camera access required for secure identity setup.");
       setStep('WELCOME');
@@ -51,15 +54,21 @@ const EnrollmentOnboarding: React.FC<EnrollmentOnboardingProps> = ({ user, onCom
   };
 
   const handleCapture = () => {
-    if (videoRef.current && canvasRef.current) {
+    if (videoRef.current && canvasRef.current && videoRef.current.readyState >= 2) {
       setStep('FINALIZING');
       const interval = setInterval(() => {
         setScanProgress(p => {
           if (p >= 100) {
             clearInterval(interval);
-            const context = canvasRef.current!.getContext('2d');
-            context!.drawImage(videoRef.current!, 0, 0, 320, 240);
-            const dataUrl = canvasRef.current!.toDataURL('image/jpeg');
+            const context = canvasRef.current!.getContext('2d', { willReadFrequently: true });
+            
+            const vw = videoRef.current!.videoWidth || 320;
+            const vh = videoRef.current!.videoHeight || 240;
+            canvasRef.current!.width = vw;
+            canvasRef.current!.height = vh;
+            
+            context!.drawImage(videoRef.current!, 0, 0, vw, vh);
+            const dataUrl = canvasRef.current!.toDataURL('image/jpeg', 0.8);
             
             const stream = videoRef.current!.srcObject as MediaStream;
             stream.getTracks().forEach(t => t.stop());
@@ -83,6 +92,8 @@ const EnrollmentOnboarding: React.FC<EnrollmentOnboardingProps> = ({ user, onCom
           return p + 10;
         });
       }, 200);
+    } else {
+      alert("CAMERA NOT READY. PLEASE WAIT A SECOND.");
     }
   };
 
@@ -150,7 +161,7 @@ const EnrollmentOnboarding: React.FC<EnrollmentOnboardingProps> = ({ user, onCom
         {step === 'SCAN' && (
           <div className="space-y-8 animate-enter">
             <div className="relative w-full aspect-square bg-black rounded-[40px] overflow-hidden shadow-2xl border-4 border-indigo-500/20">
-              <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover scale-x-[-1]" />
+              <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
               <div className="absolute inset-0 pointer-events-none">
                 <div className="absolute inset-[15%] border-2 border-dashed border-white/20 rounded-full"></div>
                 <div className="absolute top-0 left-0 w-full h-1 bg-indigo-400 shadow-[0_0_20px_#4f46e5] animate-scan"></div>
