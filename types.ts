@@ -9,6 +9,13 @@ export interface Class {
   id: string;
   name: string;
   description?: string;
+  location?: {
+    lat: number;
+    lng: number;
+  };
+  geofenceRadius?: number; // meters
+  startTime?: string; // HH:mm
+  endTime?: string;   // HH:mm
 }
 
 export interface UserSettings {
@@ -18,6 +25,7 @@ export interface UserSettings {
   twoFactorEnabled: boolean;
   faceRecognitionSensitivity: number; // 0-100
   require2FABeforeFaceScan: boolean;
+  autoAttendanceEnabled?: boolean;
 }
 
 export interface User {
@@ -55,13 +63,14 @@ export interface AttendanceRecord {
   userId: string;
   date: string;
   time: string;
-  status: 'PRESENT' | 'ABSENT' | 'OD';
+  status: 'PRESENT' | 'ABSENT' | 'OD' | 'PENDING' | 'REJECTED';
   location: {
     lat: number;
     lng: number;
   };
   device: string;
   facialMatchScore?: number;
+  leftGeofenceAt?: string;
 }
 
 export interface LeaveRequest {

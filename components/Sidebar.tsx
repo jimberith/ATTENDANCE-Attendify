@@ -11,68 +11,68 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ user, activeTab, setActiveTab, onLogout }) => {
   const navItems = [
-    { id: 'dashboard', label: 'Home', icon: 'fa-table-columns' },
-    { id: 'attendance', label: 'Attendance', icon: 'fa-id-card' },
-    { id: 'leave', label: 'Requests', icon: 'fa-calendar-day' },
-    { id: 'profile', label: 'Me', icon: 'fa-user' },
+    { id: 'dashboard', label: 'Home', icon: 'fa-house' },
+    { id: 'attendance', label: 'Attendance', icon: 'fa-fingerprint' },
+    { id: 'leave', label: 'Requests', icon: 'fa-calendar-xmark' },
+    { id: 'profile', label: 'Profile', icon: 'fa-user' },
   ];
 
   if (user.role === UserRole.ADMIN) {
-    navItems.push({ id: 'admin', label: 'Admin', icon: 'fa-gear' });
+    navItems.push({ id: 'admin', label: 'Settings', icon: 'fa-shield-halved' });
   }
 
   return (
-    <div className="w-20 md:w-64 glass-card h-screen flex flex-col shadow-2xl transition-all duration-300">
-      <div className="p-4 md:p-6 border-b border-gray-100 flex items-center justify-center md:justify-start">
-        <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">
-          A
+    <aside className="w-20 lg:w-56 h-screen flex flex-col p-3 z-40 relative">
+      <div className="glass-panel h-full rounded-2xl flex flex-col shadow-xl">
+        {/* Brand */}
+        <div className="p-6 flex flex-col items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg">
+            <i className="fa-solid fa-bolt-lightning text-xl"></i>
+          </div>
+          <div className="hidden lg:block text-center">
+            <h1 className="text-lg font-black text-white tracking-tighter uppercase italic">Attendify</h1>
+          </div>
         </div>
-        <div className="hidden md:block ml-3">
-          <h1 className="text-xl font-bold text-gray-800">ATTENDIFY</h1>
-          <p className="text-[10px] text-gray-500 uppercase tracking-widest">Smart System</p>
-        </div>
-      </div>
 
-      <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
-        {navItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setActiveTab(item.id)}
-            className={`w-full flex items-center p-3 rounded-xl transition-all duration-200 ${
-              activeTab === item.id
-                ? 'bg-indigo-600 text-white shadow-lg'
-                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
-            }`}
-          >
-            <div className="w-6 flex justify-center">
-              <i className={`fa-solid ${item.icon} text-lg`}></i>
+        {/* Navigation */}
+        <nav className="flex-1 px-3 py-6 space-y-2">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`w-full flex items-center p-3 rounded-xl transition-all border ${
+                activeTab === item.id
+                  ? 'bg-indigo-600 border-white/20 text-white shadow-lg'
+                  : 'text-white/40 border-transparent hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <div className="w-full lg:w-6 flex justify-center">
+                <i className={`fa-solid ${item.icon} text-lg`}></i>
+              </div>
+              <span className="hidden lg:block ml-3 text-[11px] font-bold tracking-widest uppercase">
+                {item.label}
+              </span>
+            </button>
+          ))}
+        </nav>
+
+        {/* User / Logout */}
+        <div className="p-3 mt-auto">
+          <div className="bg-white/5 rounded-xl p-3 flex flex-col items-center gap-3 border border-white/10">
+            <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-white text-xs font-bold">
+              {user.name.charAt(0)}
             </div>
-            <span className="hidden md:block ml-3 font-medium">{item.label}</span>
-          </button>
-        ))}
-      </nav>
-
-      <div className="p-4 border-t border-gray-100">
-        <div className="hidden md:flex items-center mb-6 px-2">
-          <div className="w-10 h-10 rounded-full bg-indigo-100 border-2 border-white flex items-center justify-center text-indigo-700 overflow-hidden">
-            {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" /> : <i className="fa-solid fa-user"></i>}
-          </div>
-          <div className="ml-3 overflow-hidden">
-            <p className="text-sm font-bold text-gray-800 truncate">{user.name}</p>
-            <p className="text-[10px] text-gray-500 uppercase">{user.role}</p>
+            <button 
+              onClick={onLogout}
+              className="w-full py-2 rounded-lg bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white transition-all text-[9px] font-bold tracking-widest flex items-center justify-center gap-2"
+            >
+              <i className="fa-solid fa-power-off"></i>
+              <span className="hidden lg:block">LOGOUT</span>
+            </button>
           </div>
         </div>
-        <button
-          onClick={onLogout}
-          className="w-full flex items-center p-3 rounded-xl text-red-500 hover:bg-red-50 transition-all duration-200"
-        >
-          <div className="w-6 flex justify-center">
-            <i className="fa-solid fa-right-from-bracket text-lg"></i>
-          </div>
-          <span className="hidden md:block ml-3 font-medium">Logout</span>
-        </button>
       </div>
-    </div>
+    </aside>
   );
 };
 
