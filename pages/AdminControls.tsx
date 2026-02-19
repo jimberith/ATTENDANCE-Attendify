@@ -144,6 +144,42 @@ const AdminControls: React.FC<AdminControlsProps> = ({ user }) => {
     }
   };
 
+  const arduinoCode = `/* ATTENDIFY ESP32-CAM FIRMWARE V2.5 */
+#include <WiFi.h>
+#include <HTTPClient.h>
+
+const char* ssid = "YOUR_WIFI_SSID";
+const char* password = "YOUR_WIFI_PASSWORD";
+// Using local network or direct WebHook for serverless operation
+const char* serverUrl = "http://192.168.1.100/api/attendance"; 
+const char* deviceId = "NODE_01";
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(4, OUTPUT); // Status LED
+  connectWiFi();
+}
+
+void connectWiFi() {
+  WiFi.begin(ssid, password);
+  Serial.print("Connecting...");
+  while (WiFi.status() != WL_CONNECTED) {
+    digitalWrite(4, !digitalRead(4));
+    delay(500);
+    Serial.print(".");
+  }
+  digitalWrite(4, HIGH);
+  Serial.println("\nWiFi Connected!");
+}
+
+void loop() {
+  if (WiFi.status() != WL_CONNECTED) {
+    connectWiFi();
+  }
+  // Face Capture and local sync logic...
+  delay(10000);
+}`;
+
   return (
     <div className="flex flex-col lg:flex-row gap-6 min-h-[600px] animate-enter">
       {/* Sidebar Navigation */}
@@ -261,36 +297,6 @@ const AdminControls: React.FC<AdminControlsProps> = ({ user }) => {
           </div>
         )}
 
-        {activeSubTab === 'onduty' && (
-          <div className="glass-panel rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl">
-            <div className="p-6 bg-white/5 border-b border-white/10 flex justify-between items-center">
-              <h3 className="text-sm font-black text-white uppercase italic tracking-widest">Pending Approvals</h3>
-            </div>
-            <div className="divide-y divide-white/5">
-              {leaveRequests.filter(r => r.status === 'PENDING').length === 0 ? (
-                <div className="p-20 text-center text-white/10 font-black uppercase italic text-xs">No requests waiting</div>
-              ) : (
-                leaveRequests.filter(r => r.status === 'PENDING').map((req) => (
-                  <div key={req.id} className="p-6 flex items-center justify-between hover:bg-white/5 transition-all">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs font-black text-white">{req.userName}</span>
-                        <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-500 text-[8px] font-black uppercase">{req.type === 'LEAVE' ? 'Leave' : 'Official'}</span>
-                      </div>
-                      <p className="text-[10px] text-white/40 font-bold uppercase">{req.startDate} — {req.endDate}</p>
-                      <p className="text-[10px] text-white/60 italic">"{req.reason}"</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => handleUpdateLeaveStatus(req.id, 'APPROVED')} className="w-10 h-10 rounded-xl bg-green-500 text-white shadow-lg shadow-green-500/20 hover:scale-105 transition-all"><i className="fa-solid fa-check"></i></button>
-                      <button onClick={() => handleUpdateLeaveStatus(req.id, 'REJECTED')} className="w-10 h-10 rounded-xl bg-red-500 text-white shadow-lg shadow-red-500/20 hover:scale-105 transition-all"><i className="fa-solid fa-xmark"></i></button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        )}
-
         {activeSubTab === 'setup' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="space-y-6">
@@ -316,7 +322,7 @@ const AdminControls: React.FC<AdminControlsProps> = ({ user }) => {
                 </div>
               </div>
 
-              {/* Hardware Monitoring */}
+              {/* Hardware Monitoring & Firmware Snippet */}
               <div className="glass-panel p-8 rounded-[2rem] border border-white/10 bg-black/40">
                 <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-6">Connected Devices</h4>
                 <form onSubmit={handleAddNode} className="mb-6 space-y-3">
@@ -343,10 +349,16 @@ const AdminControls: React.FC<AdminControlsProps> = ({ user }) => {
                     </div>
                   ))}
                 </div>
+                <div className="mt-8 pt-6 border-t border-white/10">
+                   <h5 className="text-[9px] font-black text-white/40 uppercase mb-4 tracking-widest">ESP32-CAM FIRMWARE V2.5</h5>
+                   <pre className="p-4 bg-black/80 rounded-xl text-[8px] font-mono text-green-400 overflow-x-auto max-h-40 scrollbar-hide">
+                     {arduinoCode}
+                   </pre>
+                </div>
               </div>
             </div>
 
-            {/* LIVE CONTINUOUS ENFORCEMENT ENGINE */}
+            {/* LIVE TRACKING ENGINE */}
             <div className="glass-panel rounded-[3rem] border border-white/10 bg-black/30 overflow-hidden flex flex-col">
               <div className="p-6 border-b border-white/10 bg-white/5 flex justify-between items-center">
                 <h4 className="text-[11px] font-black text-white uppercase italic tracking-[0.2em]">Live Tracking</h4>
@@ -382,6 +394,7 @@ const AdminControls: React.FC<AdminControlsProps> = ({ user }) => {
           </div>
         )}
 
+        {/* CLASSES TAB */}
         {activeSubTab === 'classes' && (
           <div className="space-y-6">
             <div className="glass-panel p-8 rounded-[2rem] border border-white/10 bg-black/30">
@@ -389,21 +402,21 @@ const AdminControls: React.FC<AdminControlsProps> = ({ user }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-white/40 uppercase ml-2">Class Name</label>
-                  <input type="text" placeholder="E.G. 10A" value={newClassName} onChange={e => setNewClassName(e.target.value)} className="w-full p-4 rounded-xl bg-black/60 border border-white/20 text-white text-xs font-black uppercase" />
+                  <input type="text" placeholder="E.G. 10A" value={newClassName} onChange={e => setNewClassName(e.target.value)} className="w-full p-4 rounded-xl bg-black/60 border border-white/20 text-white text-xs font-black uppercase shadow-inner" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-white/40 uppercase ml-2">Range (Meters)</label>
-                  <input type="number" value={newRadius} onChange={e => setNewRadius(parseInt(e.target.value))} className="w-full p-4 rounded-xl bg-black/60 border border-white/20 text-white text-xs font-black uppercase" />
+                  <input type="number" value={newRadius} onChange={e => setNewRadius(parseInt(e.target.value))} className="w-full p-4 rounded-xl bg-black/60 border border-white/20 text-white text-xs font-black uppercase shadow-inner" />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-white/40 uppercase ml-2">Work Starts</label>
-                  <input type="time" value={newStartTime} onChange={e => setNewStartTime(e.target.value)} className="w-full p-4 rounded-xl bg-black/60 border border-white/20 text-white text-xs font-black" />
+                  <input type="time" value={newStartTime} onChange={e => setNewStartTime(e.target.value)} className="w-full p-4 rounded-xl bg-black/60 border border-white/20 text-white text-xs font-black shadow-inner" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-white/40 uppercase ml-2">Work Ends</label>
-                  <input type="time" value={newEndTime} onChange={e => setNewEndTime(e.target.value)} className="w-full p-4 rounded-xl bg-black/60 border border-white/20 text-white text-xs font-black" />
+                  <input type="time" value={newEndTime} onChange={e => setNewEndTime(e.target.value)} className="w-full p-4 rounded-xl bg-black/60 border border-white/20 text-white text-xs font-black shadow-inner" />
                 </div>
               </div>
               <button onClick={handleAddClass} className="btn-action w-full py-4 rounded-xl text-[10px] font-black">Save Class</button>
